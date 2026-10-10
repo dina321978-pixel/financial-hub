@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinanceHub">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2310b981'/><text x='50%25' y='55%25' font-size='240' font-family='sans-serif' font-weight='bold' fill='white' dominant-baseline='middle' text-anchor='middle'>₹</text></svg>">
+  <title>Executive Financial Hub</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #131b2e;
+      --card-border: #1e293b;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --text-pri: #f8fafc;
+      --text-sec: #94a3b8;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-pri);
+      font-family: var(--font);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      padding-bottom: 90px;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    header {
+      padding: 18px 20px 14px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.3px; }
+    .sync-badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #1e293b;
+      color: var(--text-sec);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    .sync-dot.syncing { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* KPI Highlights */
+    .kpi-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 16px 20px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .kpi-card.full-width { grid-column: span 2; }
+    .kpi-label { font-size: 0.75rem; color: var(--text-sec); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.5px; }
+    .kpi-value.green { color: var(--accent); }
+    .kpi-value.red { color: var(--danger); }
+
+    /* Quick Filter Chips */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      padding: 4px 20px 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      font-size: 0.8rem;
+      color: var(--text-sec);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .chip.active {
+      background: var(--accent);
+      color: #064e3b;
+      font-weight: 600;
+      border-color: var(--accent);
+    }
+
+    /* Transactions Feed */
+    .section-title {
+      padding: 8px 20px 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-sec);
+      display: flex;
+      justify-content: space-between;
+    }
+    .feed { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+    .tx-item {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .tx-item:active { transform: scale(0.98); }
+    .tx-left { display: flex; flex-direction: column; gap: 4px; }
+    .tx-desc { font-size: 0.95rem; font-weight: 600; }
+    .tx-sub { font-size: 0.75rem; color: var(--text-sec); }
+    .tx-right { text-align: right; }
+    .tx-amt { font-size: 1.05rem; font-weight: 700; }
+    .tx-amt.credit { color: var(--accent); }
+    .tx-amt.debit { color: var(--danger); }
+    .tx-mode { font-size: 0.7rem; color: var(--text-sec); }
+
+    /* Floating Action Button (FAB) */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #064e3b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      border: none;
+      box-shadow: 0 10px 25px var(--accent-glow);
+      cursor: pointer;
+      z-index: 100;
+    }
+
+    /* Bottom Modal Form */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      justify-content: center;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: #111827;
+      border-top: 1px solid var(--card-border);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 540px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px 20px 40px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    }
+    .modal-sheet h2 { font-size: 1.15rem; margin-bottom: 16px; font-weight: 700; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.78rem; color: var(--text-sec); margin-bottom: 6px; font-weight: 500; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      color: white;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+    .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: #064e3b; }
+    .btn-secondary { background: #374151; color: white; }
+    .btn-danger { background: #991b1b; color: #fee2e2; }
+
+    /* Empty and Loading State */
+    .empty-state { text-align: center; color: var(--text-sec); padding: 40px 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header>
+    <div>
+      <h1>Executive Hub</h1>
+      <span style="font-size: 0.72rem; color: var(--text-sec);">Master Passbook & Recoveries</span>
+    </div>
+    <div class="sync-badge" onclick="fetchData()">
+      <div id="syncDot" class="sync-dot"></div>
+      <span id="syncText">Live</span>
+    </div>
+  </header>
+
+  <!-- Top Real-Time Metrics -->
+  <div class="kpi-container">
+    <div class="kpi-card full-width">
+      <div class="kpi-label">Total Net Liquid Cash</div>
+      <div class="kpi-value green" id="kpiNetCash">₹ 0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cash in Bank</div>
+      <div class="kpi-value" id="kpiBank">₹ 0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cash in Hand</div>
+      <div class="kpi-value" id="kpiWallet">₹ 0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Inflow</div>
+      <div class="kpi-value green" id="kpiInflow">₹ 0</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Outflow</div>
+      <div class="kpi-value red" id="kpiExpenses">₹ 0</div>
+    </div>
+  </div>
+
+  <!-- Filter Chips -->
+  <div class="filter-bar">
+    <div class="chip active" onclick="setFilter('all', this)">All</div>
+    <div class="chip" onclick="setFilter('inflow', this)">Repayments (Credits)</div>
+    <div class="chip" onclick="setFilter('outflow', this)">Debits (Outflow)</div>
+    <div class="chip" onclick="setFilter('bank', this)">Cash in Bank</div>
+    <div class="chip" onclick="setFilter('cash', this)">Cash in Hand</div>
+  </div>
+
+  <!-- Feed Header -->
+  <div class="section-title">
+    <span>Passbook Ledger</span>
+    <span id="recordCount" style="font-size: 0.8rem;">0 entries</span>
+  </div>
+
+  <!-- Transactions Feed -->
+  <div class="feed" id="txFeed">
+    <div class="empty-state">Loading transactions from Google Sheets...</div>
+  </div>
+
+  <!-- Floating Add Button -->
+  <button class="fab" onclick="openModal('create')">+</button>
+
+  <!-- Modal for Create / Edit -->
+  <div class="modal-overlay" id="txModal" onclick="handleOverlayClick(event)">
+    <div class="modal-sheet">
+      <h2 id="modalTitle">New Transaction</h2>
+      <input type="hidden" id="fRowId">
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="fDate">
+      </div>
+
+      <div class="form-group">
+        <label>Account</label>
+        <select id="fAccount">
+          <option value="Cash in Bank">Cash in Bank</option>
+          <option value="Cash in Hand">Cash in Hand (Wallet)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Transaction Type</label>
+        <select id="fType">
+          <option value="Repayment Received">Repayment Received</option>
+          <option value="EMI Payment">EMI Payment</option>
+          <option value="Expense">Expense</option>
+          <option value="Adjustment">Adjustment</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Applicable Loan</label>
+        <select id="fLoan">
+          <option value="General / None">General / None</option>
+          <option value="Loan 1">Loan 1 (Cred Loan)</option>
+          <option value="Loan 2">Loan 2 (Cred Loan)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="fDesc" placeholder="e.g. Jag (Repayment Received)">
+      </div>
+
+      <div class="form-group">
+        <label>Debit / Outflow (₹)</label>
+        <input type="number" id="fDebit" placeholder="0">
+      </div>
+
+      <div class="form-group">
+        <label>Credit / Inflow (₹)</label>
+        <input type="number" id="fCredit" placeholder="0">
+      </div>
+
+      <div class="form-group">
+        <label>Payment Mode</label>
+        <select id="fMode">
+          <option value="UPI">UPI</option>
+          <option value="Cash">Cash</option>
+          <option value="Net Banking">Net Banking</option>
+          <option value="Debit Card">Debit Card</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" id="fNotes" placeholder="Optional notes">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="btnDelete" style="display:none;" onclick="deleteRecord()">Delete</button>
+        <button class="btn btn-primary" id="btnSave" onclick="saveRecord()">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------------------------------
+    // PASTE YOUR APPS SCRIPT WEB APP URL HERE:
+    // ----------------------------------------------------
+    const API_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL";
+
+    let state = {
+      transactions: [],
+      filter: 'all'
+    };
+
+    // Format currency in Indian numbering format
+    function inr(val) {
+      if (!val && val !== 0) return "₹ 0";
+      return "₹ " + Number(val).toLocaleString('en-IN');
+    }
+
+    // Set Status Badge
+    function setSyncState(isSyncing, label) {
+      const dot = document.getElementById('syncDot');
+      const text = document.getElementById('syncText');
+      if (isSyncing) {
+        dot.className = "sync-dot syncing";
+        text.innerText = label || "Syncing...";
+      } else {
+        dot.className = "sync-dot";
+        text.innerText = label || "Live";
+      }
+    }
+
+    // Fetch transactions & metrics
+    async function fetchData() {
+      setSyncState(true, "Updating");
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        if (data.success) {
+          state.transactions = data.transactions || [];
+          
+          // Update KPIs
+          if (data.kpis) {
+            document.getElementById('kpiNetCash').innerText = inr(data.kpis.totalNetCash);
+            document.getElementById('kpiBank').innerText = inr(data.kpis.cashInBank);
+            document.getElementById('kpiWallet').innerText = inr(data.kpis.cashInHand);
+            document.getElementById('kpiInflow').innerText = inr(data.kpis.totalInflow);
+            document.getElementById('kpiExpenses').innerText = inr(data.kpis.totalExpenses);
+          }
+          
+          renderFeed();
+          setSyncState(false, "Live");
+        } else {
+          setSyncState(false, "Error");
+        }
+      } catch (e) {
+        console.error("Sync failed:", e);
+        setSyncState(false, "Offline");
+      }
+    }
+
+    // Render Ledger Feed
+    function renderFeed() {
+      const feed = document.getElementById('txFeed');
+      const countEl = document.getElementById('recordCount');
+
+      let list = state.transactions.slice().reverse(); // Show latest first
+
+      if (state.filter === 'inflow') list = list.filter(t => t.credit > 0);
+      else if (state.filter === 'outflow') list = list.filter(t => t.debit > 0);
+      else if (state.filter === 'bank') list = list.filter(t => t.account === 'Cash in Bank');
+      else if (state.filter === 'cash') list = list.filter(t => t.account.includes('Hand'));
+
+      countEl.innerText = `${list.length} entries`;
+
+      if (list.length === 0) {
+        feed.innerHTML = `<div class="empty-state">No matching transactions found.</div>`;
+        return;
+      }
+
+      feed.innerHTML = list.map(t => {
+        const isCredit = t.credit > 0;
+        const amountDisplay = isCredit ? `+ ${inr(t.credit)}` : `- ${inr(t.debit)}`;
+        const amtClass = isCredit ? 'credit' : 'debit';
+        return `
+          <div class="tx-item" onclick="openModal('edit', ${t.rowId})">
+            <div class="tx-left">
+              <div class="tx-desc">${t.description || t.type}</div>
+              <div class="tx-sub">${t.date || 'No Date'} • ${t.account}</div>
+            </div>
+            <div class="tx-right">
+              <div class="tx-amt ${amtClass}">${amountDisplay}</div>
+              <div class="tx-mode">${t.mode || 'UPI'} • ${t.loan || ''}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setFilter(type, el) {
+      document.querySelectorAll('.filter-bar .chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      state.filter = type;
+      renderFeed();
+    }
+
+    // Modal Handling
+    function openModal(mode, rowId = null) {
+      const overlay = document.getElementById('txModal');
+      const title = document.getElementById('modalTitle');
+      const btnDel = document.getElementById('btnDelete');
+
+      if (mode === 'edit') {
+        const item = state.transactions.find(t => t.rowId === rowId);
+        if (!item) return;
+
+        title.innerText = "Edit Entry (Row " + rowId + ")";
+        document.getElementById('fRowId').value = item.rowId;
+        document.getElementById('fDate').value = item.date;
+        document.getElementById('fAccount').value = item.account;
+        document.getElementById('fType').value = item.type;
+        document.getElementById('fLoan').value = item.loan;
+        document.getElementById('fDesc').value = item.description;
+        document.getElementById('fDebit').value = item.debit || '';
+        document.getElementById('fCredit').value = item.credit || '';
+        document.getElementById('fMode').value = item.mode;
+        document.getElementById('fNotes').value = item.notes;
+        btnDel.style.display = "block";
+      } else {
+        title.innerText = "New Transaction";
+        document.getElementById('fRowId').value = "";
+        document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('fAccount').value = "Cash in Bank";
+        document.getElementById('fType').value = "Repayment Received";
+        document.getElementById('fLoan').value = "General / None";
+        document.getElementById('fDesc').value = "";
+        document.getElementById('fDebit').value = "";
+        document.getElementById('fCredit').value = "";
+        document.getElementById('fMode').value = "UPI";
+        document.getElementById('fNotes').value = "";
+        btnDel.style.display = "none";
+      }
+
+      overlay.classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('txModal').classList.remove('open');
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target.id === 'txModal') closeModal();
+    }
+
+    // Save (Create or Update)
+    async function saveRecord() {
+      const rowId = document.getElementById('fRowId').value;
+      const isUpdate = Boolean(rowId);
+
+      const payload = {
+        action: isUpdate ? "update" : "create",
+        rowId: isUpdate ? Number(rowId) : undefined,
+        date: document.getElementById('fDate').value,
+        account: document.getElementById('fAccount').value,
+        type: document.getElementById('fType').value,
+        loan: document.getElementById('fLoan').value,
+        description: document.getElementById('fDesc').value,
+        debit: Number(document.getElementById('fDebit').value) || 0,
+        credit: Number(document.getElementById('fCredit').value) || 0,
+        mode: document.getElementById('fMode').value,
+        notes: document.getElementById('fNotes').value,
+        status: "Completed"
+      };
+
+      closeModal();
+      setSyncState(true, "Saving...");
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        await fetchData();
+      } catch (err) {
+        alert("Failed to save entry. Check your internet connection.");
+        setSyncState(false, "Error");
+      }
+    }
+
+    // Delete Record
+    async function deleteRecord() {
+      const rowId = document.getElementById('fRowId').value;
+      if (!rowId || !confirm("Delete this entry from your Google Sheet?")) return;
+
+      closeModal();
+      setSyncState(true, "Deleting...");
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: "delete", rowId: Number(rowId) })
+        });
+        await fetchData();
+      } catch (err) {
+        alert("Failed to delete entry.");
+        setSyncState(false, "Error");
+      }
+    }
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+      });
+    }
+
+    // Initial Load
+    fetchData();
+  </script>
+</body>
+</html>
